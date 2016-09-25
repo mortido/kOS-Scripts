@@ -30,16 +30,11 @@ function check_stage {
 	    stage.
 		print "Stage separeted.".
 		list engines in engines.
-        wait 1.
+        wait 0.1.
 	}
 }
 
-print "T-3...".
-wait 1.
-print "T-2...".
-wait 1.
-print "T-1...".
-wait 1.
+clearscreen.
 print "LAUNCH!".
 stage.
 
@@ -121,10 +116,13 @@ print "Circularization".
 //    wait 0.01.
 //}
 
+set thrust to 0 .
+wait 1.
 stage.
 
-set antennas to ship:partsdubbed("ommunotron 32").
+set antennas to ship:partsdubbed("Communotron 32").
 for antenna in antennas {
+	print "Deploying antenna...".
 	antenna:getmodule("ModuleRTAntenna"):doevent("activate").
 }
 
