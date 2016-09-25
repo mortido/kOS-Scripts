@@ -1,5 +1,6 @@
-copypath("0:/launch", "").
-copypath("0:/countdown", "").
-
-run countdown(10).
-run launch(100000).
+copypath("0:/l2o", "").
+copypath("0:/anode", "").
+copypath("0:/mt", "").
+wait 10.
+run mt.
+run l2o(100000).
