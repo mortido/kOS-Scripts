@@ -16,11 +16,9 @@ function anode {
     printm("Periapsis: " + round(periapsis/1000) + "km -> " + round(altm/1000) + "km").
     
     // setup node 
-    set dv to nodedv(apoapsis, periapsis, altm).
+    local dv is nodedv(apoapsis, periapsis, altm).
     printm("Apoapsis burn dv:" + round(dv) + "m/s").
-    set nd to node(time:seconds + eta:apoapsis, 0, 0, dv).
-    
-    return nd.
+    return node(time:seconds + eta:apoapsis, 0, 0, dv).
 }
 
 function pnode {
@@ -31,9 +29,7 @@ function pnode {
     printm("Periapsis: " + round(periapsis/1000) + "km").
     
     // setup node 
-    set dv to nodedv(periapsis, apoapsis, altm).
+    local dv is nodedv(periapsis, apoapsis, altm).
     printm("Periapsis burn dv:" + round(dv) + "m/s").
-    set nd to node(time:seconds + eta:periapsis, 0, 0, dv).
-    
-    return nd.
+    return node(time:seconds + eta:periapsis, 0, 0, dv).
 }

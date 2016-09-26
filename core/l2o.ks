@@ -2,7 +2,7 @@ parameter orbitalt.
 
 list engines in engs.
 function check_stage {
-    set stageneeded to false.
+    local stageneeded is false.
     for eng in engs {
         if eng:flameout and eng:thrust = 0
             {
@@ -14,7 +14,7 @@ function check_stage {
         stage.
         print "Stage separeted.".
         list engines in ens.
-        wait 0.1.
+        wait 1.
     }
 }
 
@@ -33,8 +33,8 @@ if body:name = "Kerbin" {
 function get_throttle {
     parameter opt_twr.
     if maxthrust > 0 {
-        local heregrav is body:mu/((altitude+body:radius)^2).
-        local maxtwr to ship:maxthrust / (heregrav * ship:mass).
+        local heregrav is body:mu/((altitude + body:radius)^2).
+        local maxtwr is ship:maxthrust / (heregrav * ship:mass).
         return min(opt_twr / maxtwr, 1).
     } else {
         return 0.
@@ -74,7 +74,6 @@ wait 1.
 start_mission().
 stage.
 
-set pitch to 0.
 set thrust to 1.
 lock throttle to thrust. 
 lock steering to up + R(0, 0, -180).
@@ -84,12 +83,12 @@ until altitude > body:atm:height and apoapsis > orbitalt {
     check_stage().
 
      if altitude > gt0 and altitude < gt1 {
-        set arr to (altitude - gt0) / (gt1 - gt0).
-        set pda to (cos(arr * 180) + 1) / 2.
-        set pitch to pitch1 * ( 1 - pda ).
+        local arr is (altitude - gt0) / (gt1 - gt0).
+        local pda is (cos(arr * 180) + 1) / 2.
+        local pitch is pitch1 * ( 1 - pda ).
         
         // 0 for NORTH.
-        set pitchvector to heading(90, 90-pitch).
+        local pitchvector is heading(90, 90-pitch).
         lock steering to lookdirup(pitchvector:vector, ship:facing:topvector).
     } else if altitude > gt1 and altitude < gt2 {
         //keep the ship's roll always top
@@ -100,7 +99,7 @@ until altitude > body:atm:height and apoapsis > orbitalt {
     }
     
     if apoapsis < orbitalt {
-        set ttemp to get_throttle(opt_twr).
+        local ttemp is get_throttle(opt_twr).
         if apoapsis > 0.999 * orbitalt {
             set ttemp to 0.01.
         } else if apoapsis > 0.99 * orbitalt {
@@ -112,7 +111,7 @@ until altitude > body:atm:height and apoapsis > orbitalt {
     } else {
         set thrust to 0.
     }
-    wait 0.01.
+    wait 0.1.
 }.
 
 set nd to anode(apoapsis).
