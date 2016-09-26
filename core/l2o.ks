@@ -1,9 +1,9 @@
 parameter orbitalt.
 
-list engines in engines.
+list engines in engs.
 function check_stage {
     set stageneeded to false.
-    for eng in engines {
+    for eng in engs {
         if eng:flameout and eng:thrust = 0
             {
                 set stageneeded to true.
@@ -13,7 +13,7 @@ function check_stage {
     if stageneeded {
         stage.
         print "Stage separeted.".
-        list engines in engines.
+        list engines in ens.
         wait 0.1.
     }
 }
@@ -115,11 +115,11 @@ until altitude > body:atm:height and apoapsis > orbitalt {
     wait 0.01.
 }.
 
-printm("Circularization started.").
-
-run anode(apoapsis).
-
 set thrust to 0.
+
+printm("Circularization started.").
+set nd to run anode(apoapsis).
+
 //wait 1.
 //stage.
 
