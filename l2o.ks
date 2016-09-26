@@ -2,20 +2,20 @@ parameter orbitalt.
 
 list engines in engines.
 function check_stage {
-	set stageneeded to false.
+    set stageneeded to false.
     for eng in engines {
         if eng:flameout and eng:thrust = 0
             {
-				set stageneeded to true.
+                set stageneeded to true.
             }
     }.
-	
+    
     if stageneeded {
-	    stage.
-		print "Stage separeted.".
-		list engines in engines.
+        stage.
+        print "Stage separeted.".
+        list engines in engines.
         wait 0.1.
-	}
+    }
 }
 
 if body:name = "Kerbin" {
@@ -27,18 +27,18 @@ if body:name = "Kerbin" {
     set pitch1 to 45.
 
     // velocity parameters
-	set opt_twr to 1.8.
+    set opt_twr to 1.8.
 }
 
 function get_throttle {
-	parameter opt_twr.
-	if maxthrust > 0 {
-		local heregrav is body:mu/((altitude+body:radius)^2).
-		local maxtwr to ship:maxthrust / (heregrav * ship:mass).
+    parameter opt_twr.
+    if maxthrust > 0 {
+        local heregrav is body:mu/((altitude+body:radius)^2).
+        local maxtwr to ship:maxthrust / (heregrav * ship:mass).
         return min(opt_twr / maxtwr, 1).
     } else {
-		return 0.
-	}
+        return 0.
+    }
 }
 
 // adjust altitudes to start position
@@ -55,12 +55,17 @@ when altitude > ramp then {
 when altitude > gt0 then {
     printm("Beginning gravity turn."). 
 }
-when altitude > gt1 then {
-    printm("Navigating surface prograde."). 
-}
+//when altitude > gt1 then {
+//    printm("Navigating surface prograde."). 
+//}
 when altitude > gt2 then {
     printm("Navigating orbit prograde."). 
 }
+
+when altitude <= body:atm:height and apoapsis > orbitalt then {
+    printm("Leaving atmosphere. Maintaining apoapsis altitude.").
+}
+
 
 clearscreen.
 print "Launch2Orbit start".
@@ -75,15 +80,15 @@ lock throttle to thrust.
 lock steering to up + R(0, 0, -180).
 
 //until altitude > body:atm:height or apoapsis > orbitalt {
-until true and altitude > body:atm:height and apoapsis > orbitalt {
+until altitude > body:atm:height and apoapsis > orbitalt {
     check_stage().
 
      if altitude > gt0 and altitude < gt1 {
         set arr to (altitude - gt0) / (gt1 - gt0).
         set pda to (cos(arr * 180) + 1) / 2.
         set pitch to pitch1 * ( 1 - pda ).
-		
-		// 0 for NORTH.
+        
+        // 0 for NORTH.
         set pitchvector to heading(90, 90-pitch).
         lock steering to lookdirup(pitchvector:vector, ship:facing:topvector).
     } else if altitude > gt1 and altitude < gt2 {
@@ -94,21 +99,20 @@ until true and altitude > body:atm:height and apoapsis > orbitalt {
         lock steering to lookdirup(prograde:vector, ship:facing:topvector).
     }
     
-	if apoapsis < orbitalt {
-		set ttemp to get_throttle(opt_twr).
-		if apoapsis > 0.999 * orbitalt {
-			set ttemp to 0.01.
-		} else if apoapsis > 0.99 * orbitalt {
-			set ttemp to 0.05 * ttemp.
-		} else if apoapsis > 0.95 * orbitalt {
-			set ttemp to 0.8 * ttemp.
-		}
-		set thrust to ttemp.
-	} else {
-		printm("Leaving atmosphere.").
-		set thrust to 0.
-	}
-	wait 0.01.
+    if apoapsis < orbitalt {
+        set ttemp to get_throttle(opt_twr).
+        if apoapsis > 0.999 * orbitalt {
+            set ttemp to 0.01.
+        } else if apoapsis > 0.99 * orbitalt {
+            set ttemp to 0.05 * ttemp.
+        } else if apoapsis > 0.95 * orbitalt {
+            set ttemp to 0.8 * ttemp.
+        }
+        set thrust to ttemp.
+    } else {
+        set thrust to 0.
+    }
+    wait 0.01.
 }.
 
 printm("Circularization started.").
@@ -122,8 +126,8 @@ set thrust to 0.
 
 //set antennas to ship:partsdubbed("Communotron 32").
 //for antenna in antennas {
-//	printm("Deploying antenna.").
-//	antenna:getmodule("ModuleRTAntenna"):doevent("activate").
+//    printm("Deploying antenna.").
+//    antenna:getmodule("ModuleRTAntenna"):doevent("activate").
 //}
 
 unlock all.
