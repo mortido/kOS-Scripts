@@ -115,11 +115,17 @@ until altitude > body:atm:height and apoapsis > orbitalt {
     wait 0.01.
 }.
 
-set thrust to 0.
+set nd to anode(apoapsis).
+add nd.
 
-printm("Circularization started.").
-set nd to run anode(apoapsis).
+set butnt to
+warpdelta2rails(nd:eta + 60).
 
+// https://www.reddit.com/r/Kos/comments/3ftcwk/compute_burn_time_with_calculus/
+//run execnode(nd).
+remove nd.
+
+//lock throttle to 0.
 //wait 1.
 //stage.
 
@@ -131,4 +137,4 @@ set nd to run anode(apoapsis).
 //}
 
 unlock all.
-print "done".
+printm(round(orbitalt/1000) + "km orbit is reached!").
