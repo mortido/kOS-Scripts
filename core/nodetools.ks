@@ -78,8 +78,8 @@ function execnode {
     
     printm("Navigating node target.").
     lock steering to lookdirup(ndv0, ship:facing:topvector).
-    local lock dpitch is abs(ndv0:direction:pitch - facing:pitch).
-    local lock dyaw is abs(ndv0:direction:yaw - facing:yaw).
+    local lock dpitch to abs(ndv0:direction:pitch - facing:pitch).
+    local lock dyaw to abs(ndv0:direction:yaw - facing:yaw).
     local starttime is time:seconds.
     until dpitch < 0.15 and dyaw < 0.15 {
         if time:seconds - starttime > offset {

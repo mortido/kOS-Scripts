@@ -1,5 +1,5 @@
 function get_azimuth {
-    parameter orbitincl.
+    parameter orbitinclooo.
 
     return 90.
 }
@@ -59,19 +59,11 @@ function launch2orbit{
 
     // events log
     local ramp to altitude + 25.
-    when altitude > ramp then {
-        printm("Liftoff.").
-    }
-    when altitude > gt0 then {
-        printm("Beginning gravity turn."). 
-    }
-    when altitude > gt1 then {
-        printm("Stop pitching.").
-        //printm("Navigating surface prograde."). 
-    }
-    when altitude > gt2 then {
-        printm("Navigating orbit prograde."). 
-    }
+    when altitude > ramp then { printm("Liftoff."). }
+    when altitude > gt0 then { printm("Beginning gravity turn."). }
+    when altitude > gt1 then { printm("Stop pitching."). }
+    //when altitude > gt1 then { printm("Navigating surface prograde."). }
+    when altitude > gt2 then { printm("Navigating orbit prograde."). }
     when altitude <= body:atm:height and apoapsis > orbitalt1 then {
         printm("Leaving atmosphere. Maintaining apoapsis altitude.").
     }
@@ -100,10 +92,10 @@ function launch2orbit{
         if altitude > gt0 and altitude < gt1 {
             local arr is (altitude - gt0) / (gt1 - gt0).
             local pda is (cos(arr * 180) + 1) / 2.
-            local pitch is pitch1 * ( 1 - pda ).
+            local pt is pitch1 * ( 1 - pda ).
 
             // 0 for NORTH.
-            local pitchvector is heading(get_azimuth(orbitincl), 90-pitch).
+            local pitchvector is heading(get_azimuth(orbitincl), 90-pt).
             set sset to lookdirup(pitchvector:vector, ship:facing:topvector).
         } else if altitude > gt1 and altitude < gt2 {
             // lock steering to lookdirup(srfprograde:vector, ship:facing:topvector).
@@ -127,7 +119,8 @@ function launch2orbit{
     }.
     set tset to 0.
     wait 1.
-    unlock all.
+    unlock throttle. 
+    unlock steering.
     
     set nd to anode(apoapsis).
     if displaynodes { add nd. }
@@ -138,7 +131,7 @@ function launch2orbit{
 
 function launch2circle {
     parameter orbitalt.
-    parameter orbitincl.
+    parameter orbitinclppp.
     
-    launch2orbit(orbitalt, orbitalt, orbitincl, true).
+    launch2orbit(orbitalt, orbitalt, orbitinclppp, true).
 }
