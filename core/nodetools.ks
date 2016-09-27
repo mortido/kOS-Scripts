@@ -60,7 +60,7 @@ function burn_duration {
     local ve is ispavg * g0.
     local m0 is ship:mass.
     //return (m0 * ve / thrustSum) * (1 - constant:e^(-dv/ve)).
-    return (m0 * g0 / denomSum) * (1 - constant:e^(-dv/ve))+1.
+    return (m0 * g0 / denomSum) * (1 - constant:e^(-dv/ve)).
 }
 
 function execnode {
@@ -69,17 +69,7 @@ function execnode {
     printm("Executing node.").
     print "    Node in: " + round(nd:eta) + ", DeltaV: " + round(nd:deltav:mag).
 
-    local startvel is ship:velocity:orbit.
-    local oldtime is time:seconds.
-    
-    local dvapplied is 0.
-    local gravdv is V(0,0,0).
-    local lock dv to ship:velocity:orbit - startvel - gravdv.
-    local lock heregrav to body:mu/((altitude + body:radius)^2).
     local ndv0 is nd:deltav.
-    //local lock ndv to ndv0 - dv. // TODO: add ability to use without setting the node
-    local lock ndv to nd:deltav.
-    
     local burn is burn_duration (ndv0:mag).
     print "    Estimated burn duration: " + round(burn) + "s".
 
@@ -87,49 +77,58 @@ function execnode {
     warp2rails(nd:eta - burn / 2 - offset).
     
     printm("Navigating node target.").
+    lock steering to lookdirup(ndv0, ship:facing:topvector).
+    local lock dpitch is abs(ndv0:direction:pitch - facing:pitch).
+    local lock dyaw is abs(ndv0:direction:yaw - facing:yaw).
+    local starttime is time:seconds.
+    until dpitch < 0.15 and dyaw < 0.15 {
+        if time:seconds - starttime > offset {
+            print beep.
+            HUDTEXT("ERROR: can't rotate rocket to target in " + offset + "seconds", 10, 2, 30, RED, true).
+            return.
+        }
+        wait 0.1.
+    }
+
+    printm("Waiting to burn start.").
+    wait until nd:eta <= (burn / 2).
+
+    printm("Burn!").
+    set starttime to time:seconds.
+    local oldtime is time:seconds.
+    local startvel is ship:velocity:orbit.
+    local lock max_acc to ship:maxthrust / ship:mass.
+    local lock heregrav to body:mu/((altitude + body:radius)^2).
+    local gravdv is V(0,0,0).
+    local lock dv to ship:velocity:orbit - startvel - gravdv.
+
+    local lock ndv to ndv0 - dv.
+    //local lock ndv to nd:deltav.
+    
+    // throttle is 100% until there is less than 1 second of time left to burn
+    // when there is less than 1 second - decrease the throttle linearly
+    lock throttle to min(ndv:mag/max_acc, 1).
 
     // lets try to 'auto' correct if node direction is changed
     lock steering to lookdirup(ndv, ship:facing:topvector).
-    // lets not.... TODO: ndv affected by changing in orbital speed.
-    //lock steering to lookdirup(ndv0, ship:facing:topvector).
-
-    // now we need to wait until the burn vector and ship's facing are aligned
-    // TODO: check that we can rotate!
-    local ndd0 is ndv0:direction.
-    wait until abs(ndd0:pitch - facing:pitch) < 0.15 and abs(ndd0:yaw - facing:yaw) < 0.15.
     
-    //the ship is facing the right direction, let's wait for our burn time
-    wait until nd:eta <= (burn / 2).
-
-    printm("Burn!.").
-    
-    local tset is 0.
-    lock throttle to tset.
-
     until false {
+    
+        // apply gravity to start velocity to exclude it from applied deltav calculation
         local newtime is time:seconds.
         local dtime is newtime - oldtime.
         set oldtime to newtime.
+        set gravdv to gravdv + heregrav * dtime * body:position:normalized.
 
-        // apply gravity to start velocity to exclude it from applied deltav calculation
-        // TODO: down vector!
-        // set gravdv to gravdv + heregrav * dtime * down_vector
-
-        // recalculate current max_acceleration, as it changes while we burn through fuel
-        local max_acc is ship:maxthrust / ship:mass.
-        
-        // throttle is 100% until there is less than 1 second of time left to burn
-        // when there is less than 1 second - decrease the throttle linearly
-        set tset to min(ndv:mag/max_acc, 1).
-        
         // here's the tricky part, we need to cut the throttle
         // as soon as our nd:deltav and initial deltav start facing opposite directions
         // this check is done via checking the dot product of those 2 vectors
         if vdot(ndv0, ndv) < 0
         {
-            printm("Overburn.").
-            printm("End burn, remain dv " + round(ndv:mag,1) + "m/s, vdot: " + round(vdot(ndv0, ndv), 1)).
+            print "    Overburn.".
             lock throttle to 0.
+            printm("End burn, remain dv " + round(ndv:mag,1) + "m/s, vdot: " + round(vdot(ndv0, ndv), 1)).
+            print "Real burn time - expected: " + round(time:seconds - starttime - burn, 2).
             break.
         }
     
@@ -140,7 +139,7 @@ function execnode {
             // we burn slowly until our node vector starts to drift significantly from initial vector
             // this usually means we are on point
             wait until vdot(ndv0, ndv) < 0.5.
-    
+
             lock throttle to 0.
             printm("End burn, remain dv " + round(ndv:mag,1) + "m/s, vdot: " + round(vdot(ndv0, ndv), 1)).
             break.
@@ -153,6 +152,6 @@ function execnode {
     unlock throttle.
     wait 1.
 
-    //set throttle to 0 just in case.
+    // set throttle to 0 just in case
     SET SHIP:CONTROL:PILOTMAINTHROTTLE TO 0.
 }
