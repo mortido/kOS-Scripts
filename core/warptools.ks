@@ -1,6 +1,11 @@
 function warp2physic {
     parameter aimtime.
-    local warpmode is "PHYSICS".
+    
+    if aimtime < time:seconds  + 8 {
+        return.
+    }
+    
+    set warpmode to "PHYSICS".
     print "Warping with physics!".
     
     until aimtime <= time:seconds {
@@ -22,7 +27,12 @@ function warp2physic {
 
 function warp2rails {
     parameter aimtime.
-    local warpmode is "RAILS".
+    
+    if aimtime < time:seconds  + 8 {
+        return.
+    }
+    
+    set warpmode to "RAILS".
     print "Warping on rails!".
     
     until aimtime <= time:seconds {
@@ -44,6 +54,9 @@ function warp2rails {
             wait 0.5.
         }
     }
+
+    // hacky.
+    wait until warp = 0 and ship:unpacked.
 }
 
 function warpdelta2physic {

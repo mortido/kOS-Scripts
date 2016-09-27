@@ -100,12 +100,10 @@ until altitude > body:atm:height and apoapsis > orbitalt {
     
     if apoapsis < orbitalt {
         local ttemp is get_throttle(opt_twr).
-        if apoapsis > 0.999 * orbitalt {
+        if apoapsis > 0.9995 * orbitalt {
             set ttemp to 0.01.
-        } else if apoapsis > 0.99 * orbitalt {
+        } else if apoapsis > 0.995 * orbitalt {
             set ttemp to 0.05 * ttemp.
-        } else if apoapsis > 0.95 * orbitalt {
-            set ttemp to 0.8 * ttemp.
         }
         set thrust to ttemp.
     } else {
@@ -113,15 +111,13 @@ until altitude > body:atm:height and apoapsis > orbitalt {
     }
     wait 0.1.
 }.
+set thrust to 0.
+wait 1.
 
+unlock all.
 set nd to anode(apoapsis).
 add nd.
-
-set butnt to
-warpdelta2rails(nd:eta + 60).
-
-// https://www.reddit.com/r/Kos/comments/3ftcwk/compute_burn_time_with_calculus/
-//run execnode(nd).
+execnode(nd).
 remove nd.
 
 //lock throttle to 0.
