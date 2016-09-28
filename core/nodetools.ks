@@ -1,3 +1,5 @@
+@LAZYGLOBAL OFF.
+
 function nodedv {
     // Calculates dv for ap/pe nodes.
     // http://wiki.kerbalspaceprogram.com/wiki/Tutorial:_Basic_Orbiting_(Math)
@@ -38,10 +40,11 @@ function pnode {
     return node(time:seconds + eta:periapsis, 0, 0, dv).
 }
 
-set g0 to 9.82.
+global g0 is 9.82.
 function burn_duration {
     parameter dv.
 
+    local engs is list().
     list engines in engs.
     local thrustSum is 0.0.
     local denomSum is 0.0.
@@ -70,7 +73,7 @@ function execnode {
     print "    Node in: " + round(nd:eta) + ", DeltaV: " + round(nd:deltav:mag).
 
     local ndv0 is nd:deltav.
-    local burn is burn_duration (ndv0:mag).
+    global burn is burn_duration (ndv0:mag).
     print "    Estimated burn duration: " + round(burn) + "s".
 
     local offset is 60.
@@ -80,7 +83,7 @@ function execnode {
     lock steering to lookdirup(ndv0, ship:facing:topvector).
     local lock dpitch to abs(ndv0:direction:pitch - facing:pitch).
     local lock dyaw to abs(ndv0:direction:yaw - facing:yaw).
-    local starttime is time:seconds.
+    global starttime is time:seconds.
     until dpitch < 0.15 and dyaw < 0.15 {
         if time:seconds - starttime > offset {
             print beep.
@@ -91,23 +94,28 @@ function execnode {
     }
 
     printm("Waiting to burn start.").
-    wait until nd:eta <= (burn / 2).
+    // Add 1 sec as fine tune will require ~2 sec instead of 1
+    wait until nd:eta <= (burn / 2 + 1).
 
     printm("Burn!").
     set starttime to time:seconds.
     local oldtime is time:seconds.
     local startvel is ship:velocity:orbit.
-    local lock max_acc to ship:maxthrust / ship:mass.
+    global lock max_acc to ship:maxthrust / ship:mass.
     local lock heregrav to body:mu/((altitude + body:radius)^2).
     local gravdv is V(0,0,0).
     local lock dv to ship:velocity:orbit - startvel - gravdv.
 
-    local lock ndv to ndv0 - dv.
-    //local lock ndv to nd:deltav.
+    //local lock ndv to ndv0 - dv.
+    global lock ndv to nd:deltav.
     
     // throttle is 100% until there is less than 1 second of time left to burn
     // when there is less than 1 second - decrease the throttle linearly
     lock throttle to min(ndv:mag/max_acc, 1).
+    
+    when ndv:mag/max_acc <= 1 then {
+        print "Real burn time - expected: " + round(time:seconds - starttime + 1 - burn, 2).
+    }
 
     // lets try to 'auto' correct if node direction is changed
     lock steering to lookdirup(ndv, ship:facing:topvector).

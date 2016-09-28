@@ -1,5 +1,7 @@
+@LAZYGLOBAL OFF.
+
 function get_azimuth {
-    parameter orbitinclooo.
+    parameter orbitincl.
 
     return 90.
 }
@@ -28,17 +30,21 @@ function get_throttle {
     }
 }
 
+global l2o_phase is "".
+
 function launch2orbit{
     parameter orbitalt1.
     parameter orbitalt2.
     parameter orbitincl.
     parameter displaynodes.
     
+    
     // trajectory parameters
+    local ramp is altitude + 25.
+    local pitch1 is 0.
     local gt0 is 0.
     local gt1 is 0.
     local gt2 is 0.
-    local pitch1 is 0.
 
     // velocity parameters
     local opt_twr is 0.
@@ -58,15 +64,12 @@ function launch2orbit{
     set gt2 to gt2 + launch_altitude.
 
     // events log
-    local ramp to altitude + 25.
-    when altitude > ramp then { printm("Liftoff."). }
-    when altitude > gt0 then { printm("Beginning gravity turn."). }
-    when altitude > gt1 then { printm("Stop pitching."). }
-    //when altitude > gt1 then { printm("Navigating surface prograde."). }
-    when altitude > gt2 then { printm("Navigating orbit prograde."). }
-    when altitude <= body:atm:height and apoapsis > orbitalt1 then {
-        printm("Leaving atmosphere. Maintaining apoapsis altitude.").
-    }
+    when l2o_phase = "liftoff" then { printm("Liftoff!"). }
+    when l2o_phase = "gt0" then { printm("Beginning gravity turn."). }
+    when l2o_phase = "gt1" then { printm("Stop pitching."). }
+    //when l2o_phase = "gt1" then { printm("Navigating surface prograde."). }
+    when l2o_phase = "gt2" then { printm("Navigating orbit prograde."). }
+    when l2o_phase = "gt2_atm" then { printm("Leaving atmosphere. Maintaining apoapsis altitude."). }
 
     clearscreen.
     print "Launch2Orbit start".
@@ -79,6 +82,7 @@ function launch2orbit{
     local sset is up + R(0, 0, -180).
     lock throttle to tset. 
     lock steering to sset.
+    local engs is list().
     list engines in engs.
     
     until altitude > body:atm:height and apoapsis > orbitalt1 {
@@ -89,7 +93,11 @@ function launch2orbit{
             wait 1.
         }
 
-        if altitude > gt0 and altitude < gt1 {
+        if altitude > ramp and altitude < gt0 {
+            set l2o_phase to "liftoff".
+        } else if altitude > gt0 and altitude < gt1 {
+            set l2o_phase to "gt0".
+
             local arr is (altitude - gt0) / (gt1 - gt0).
             local pda is (cos(arr * 180) + 1) / 2.
             local pt is pitch1 * ( 1 - pda ).
@@ -98,8 +106,12 @@ function launch2orbit{
             local pitchvector is heading(get_azimuth(orbitincl), 90-pt).
             set sset to lookdirup(pitchvector:vector, ship:facing:topvector).
         } else if altitude > gt1 and altitude < gt2 {
+            set l2o_phase to "gt1".
+
             // lock steering to lookdirup(srfprograde:vector, ship:facing:topvector).
         } else if altitude > gt2 {
+            set l2o_phase to "gt2".
+
             // we can turn orbital prograde now
             set sset to lookdirup(prograde:vector, ship:facing:topvector).
         }
@@ -113,16 +125,17 @@ function launch2orbit{
             }
             set tset to ttemp.
         } else {
+            set l2o_phase to "gt2_atm".
             set tset to 0.
         }
-        wait 0.1.
+        wait 0.05.
     }.
     set tset to 0.
     wait 1.
     unlock throttle. 
     unlock steering.
     
-    set nd to anode(apoapsis).
+    local nd is anode(apoapsis).
     if displaynodes { add nd. }
     execnode(nd).
     if displaynodes { remove nd. }
@@ -131,7 +144,9 @@ function launch2orbit{
 
 function launch2circle {
     parameter orbitalt.
-    parameter orbitinclppp.
+    parameter orbitincl.
     
-    launch2orbit(orbitalt, orbitalt, orbitinclppp, true).
+    //set orbitalt to 150000.
+    
+    launch2orbit(orbitalt, orbitalt, orbitincl, true).
 }

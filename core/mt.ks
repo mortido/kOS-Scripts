@@ -1,12 +1,13 @@
-// mission time logger.
+@LAZYGLOBAL OFF.
 
-set stime to 0.
+global mt_stime to 0.
 function printm {
-	parameter msg.
-	print "[T+" + round(missiontime - stime) + "]: " + msg.
+    parameter msg.
+
+    print "[T+" + round(missiontime - mt_stime) + "]: " + msg.
 }
 
 function start_mission {
-	set stime to missiontime.
-	printm("Launch!").
+    set mt_stime to missiontime.
+    printm("Launch!").
 }

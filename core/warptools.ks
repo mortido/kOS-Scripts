@@ -1,3 +1,5 @@
+@LAZYGLOBAL OFF.
+
 function warp2physic {
     parameter aimtime.
     
@@ -16,8 +18,8 @@ function warp2physic {
         else if dt < 25     { set maxwarp to 1. }
         else if dt < 50     { set maxwarp to 2. }
         else if dt < 60     { set maxwarp to 3. }
-        if WARP > maxwarp {
-            set WARP to maxwarp.
+        if warp > maxwarp {
+            set warp to maxwarp.
             wait 1.
         } else {
             wait 0.5.
@@ -47,8 +49,8 @@ function warp2rails {
         else if dt < 1000   { set maxwarp to 5. }
         else if dt < 10000  { set maxwarp to 6. }
         else if dt < 100000 { set maxwarp to 7. }
-        if WARP > maxwarp {
-            set WARP to maxwarp.
+        if warp > maxwarp {
+            set warp to maxwarp.
             wait 1.
         } else {
             wait 0.5.
@@ -61,10 +63,12 @@ function warp2rails {
 
 function warpdelta2physic {
     parameter delta.
+
     warp2physic(time:seconds + delta).
 }
 
 function warpdelta2rails {
     parameter delta.
+
     warp2rails(time:seconds + delta).
 }
