@@ -1,4 +1,4 @@
-@LAZYGLOBAL OFF.
+@lazyglobal off.
 
 global mt_stime to 0.
 function printm {

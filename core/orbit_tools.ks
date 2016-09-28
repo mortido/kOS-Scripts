@@ -1,4 +1,4 @@
-@LAZYGLOBAL OFF.
+@lazyglobal off.
 
 function get_azimuth {
     parameter orbitincl.
@@ -149,4 +149,27 @@ function launch2circle {
     //set orbitalt to 150000.
     
     launch2orbit(orbitalt, orbitalt, orbitincl, true).
+}
+
+function deorbit {
+    
+    printm("Deorbiting...").
+    rotate2(retrograde).
+
+    local engs is list().
+    list engines in engs.
+    
+    // burn prograde until done
+    lock throttle to 1.
+    until periapsis < 0 or ship:liquidfuel < 0 and ship:solidfuel < 0 {
+        if check_stage(engs) {
+            stage.
+            print "Stage separeted.".
+            list engines in engs.
+            wait 1.
+        }
+    }
+    
+    unlock throttle.
+    unlock steering.
 }

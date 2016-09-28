@@ -1,4 +1,45 @@
-@LAZYGLOBAL OFF.
+@lazyglobal off.
+
+function finecircle {
+    parameter accuracy is 100,
+              extra_offset is 0.
+
+    printm("Fine circular orbit...").
+    local lock semip to abs(eta:apoapsis - eta:periapsis).
+    lock steering to heading(90, -180 * (eta:apoapsis / semip PeriOff)) + R(0,0,0).
+    
+    // TODO: wait for rotation.
+    
+    lock max_acc to ship:maxthrust / ship:mass.
+    // TODO: calculate dv.
+    // min(dv/max_acc, 1).
+    lock throttle to min(((ship:apoapsis-(ship:periapsis-accuracy))/20000),1).
+    
+    wait until ship:periapsis > ship:apoapsis - accuracy.
+    lock throttle to 0.
+    unlock throttle.
+    unlock steering.
+    wait 1.
+    printm("Done!").
+}
+
+function rotate2 {
+    parameter dir.
+    parameter max_time is 60.
+    
+    lock steering to lookdirup(dir:vector, ship:facing:topvector).
+    local lock dpitch to abs(dir:pitch - facing:pitch).
+    local lock dyaw to abs(dir:yaw - facing:yaw).
+    local starttime is time:seconds.
+    until dpitch < 0.15 and dyaw < 0.15 {
+        if time:seconds - starttime > max_time {
+            print beep.
+            hudtext("ERROR: can't rotate rocket to target in " + max_time + "seconds", 10, 2, 30, RED, true).
+            return.
+        }
+        wait 0.1.
+    }
+}
 
 function nodedv {
     // Calculates dv for ap/pe nodes.
@@ -62,7 +103,6 @@ function burn_duration {
     local ispavg is thrustSum / denomSum.
     local ve is ispavg * g0.
     local m0 is ship:mass.
-    //return (m0 * ve / thrustSum) * (1 - constant:e^(-dv/ve)).
     return (m0 * g0 / denomSum) * (1 - constant:e^(-dv/ve)).
 }
 
@@ -73,49 +113,33 @@ function execnode {
     print "    Node in: " + round(nd:eta) + ", DeltaV: " + round(nd:deltav:mag).
 
     local ndv0 is nd:deltav.
-    global burn is burn_duration (ndv0:mag).
+    local burn is burn_duration (ndv0:mag).
     print "    Estimated burn duration: " + round(burn) + "s".
 
     local offset is 60.
     warp2rails(nd:eta - burn / 2 - offset).
-    
     printm("Navigating node target.").
-    lock steering to lookdirup(ndv0, ship:facing:topvector).
-    local lock dpitch to abs(ndv0:direction:pitch - facing:pitch).
-    local lock dyaw to abs(ndv0:direction:yaw - facing:yaw).
-    global starttime is time:seconds.
-    until dpitch < 0.15 and dyaw < 0.15 {
-        if time:seconds - starttime > offset {
-            print beep.
-            HUDTEXT("ERROR: can't rotate rocket to target in " + offset + "seconds", 10, 2, 30, RED, true).
-            return.
-        }
-        wait 0.1.
-    }
+    rotate2(ndv0:direction, offset).
 
-    printm("Waiting to burn start.").
     // Add 1 sec as fine tune will require ~2 sec instead of 1
+    printm("Waiting to burn start.").
     wait until nd:eta <= (burn / 2 + 1).
 
     printm("Burn!").
     set starttime to time:seconds.
     local oldtime is time:seconds.
     local startvel is ship:velocity:orbit.
-    global lock max_acc to ship:maxthrust / ship:mass.
+    local lock max_acc to ship:maxthrust / ship:mass.
     local lock heregrav to body:mu/((altitude + body:radius)^2).
     local gravdv is V(0,0,0).
     local lock dv to ship:velocity:orbit - startvel - gravdv.
 
-    //local lock ndv to ndv0 - dv.
-    global lock ndv to nd:deltav.
+    // local lock ndv to ndv0 - dv.
+    local lock ndv to nd:deltav.
     
     // throttle is 100% until there is less than 1 second of time left to burn
     // when there is less than 1 second - decrease the throttle linearly
     lock throttle to min(ndv:mag/max_acc, 1).
-    
-    when ndv:mag/max_acc <= 1 then {
-        print "Real burn time - expected: " + round(time:seconds - starttime + 1 - burn, 2).
-    }
 
     // lets try to 'auto' correct if node direction is changed
     lock steering to lookdirup(ndv, ship:facing:topvector).

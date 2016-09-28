@@ -1,4 +1,4 @@
-@LAZYGLOBAL OFF.
+@lazyglobal off.
 
 function warp2physic {
     parameter aimtime.
