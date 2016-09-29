@@ -105,5 +105,4 @@ wait until false.
 // fine circle.
 // inclanation.
 // inclanation with correct ascent node.
-// add more predefined orbits.
 
