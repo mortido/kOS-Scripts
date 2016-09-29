@@ -104,10 +104,8 @@ function get_burntime {
     local ve is ispavg * g0.
     local m0 is ship:mass.
     //return (m0 * g0 / denomSum) * (1 - constant:e^(-dv/ve))/2.
-    return (0.5 * m0 * g0 / denomSum) * (1.5 - 0.5*constant:e^(-dv/ve) - constant:e^(-0.5 * dv/ve))+0.25.
-    //local t is (m0 * g0 / denomSum) * (1 - constant:e^(-dv/ve)).
-    //local accm is dv / t.
-    //return (dv/2)/accm.
+    //return (0.5 * m0 * g0 / denomSum) * (1.5 - 0.5*constant:e^(-dv/ve) - constant:e^(-0.5 * dv/ve))+0.25.
+    return (m0 * g0 / denomSum) * (constant:e^(-dv/ve) + constant:e^(-0.5 * dv/ve)).
 }
 
 function execnode {

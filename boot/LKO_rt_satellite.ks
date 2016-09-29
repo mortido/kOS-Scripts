@@ -1,30 +1,42 @@
 core:part:getmodule("kOSProcessor"):doevent("Open Terminal").
 
-print "LOADING...".
-wait 1.
 clearscreen.
+print "                    LOADING" at (0, 10).
+wait 1. print "." at (27, 10).
+wait 1. print "." at (28, 10).
+wait 1. print "." at (29, 10).
 
-if true or not exists("1:/mt.ksm") {
+if not RTAddon:available or RTAddon:hasconnection(ship) {
     copypath("0:/spec_char.ksm", "").
     compile "0:/core/logging.ks" to "1:/logging.ksm".
     compile "0:/core/warp_tools.ks" to "1:/warp_tools.ksm".
     compile "0:/core/maneuver_tools.ks" to "1:/maneuver_tools.ksm".
     compile "0:/core/orbit_tools.ks" to "1:/orbit_tools.ksm".
-    //copypath("0:/core", "").
 }
 
 run spec_char.
-//cd("1:/core").
 run logging.
 run warp_tools.
 run maneuver_tools.
 run orbit_tools.
 
-print "You can set lko_launch_altitude variable. Default is 100km".
-global lko_launch_altitude is 150000.
+global parameters is lexicon().
+parameters:add("orbit_altitude", 100000).
+parameters:add("orbit_inclination", 0.0).
+writejson(parameters, "parameters.json").
 
-//cd("1:/core").
-//run l2o.
+function draw_menu {
+    set parameters to readjson(parameters, "parameters.json").
+    clearscreen.
+    print "           MENU".
+    print "=============================".
+    print "1 - launch the rocket".
+    print "2 - edit launch parameters".
+    print "=============================".
+    print "CURENT PARAMS:".
+    print "Orbit altitude: " + round(parameters["orbit_altitude"], 2) + " km".
+    print "Orbit inclination: " + round(parameters["orbit_inclination"], 2) + " deg".
+}
 
 function launch_me {
     parameter al, inc.
@@ -41,7 +53,6 @@ function launch_me {
     }
     
     launch2circle(al, inc).
-    
     // TODO:
     //finecircle().
     
@@ -54,29 +65,39 @@ function launch_me {
     }
     
     wait 30.
+
+    // TODO: fire decoupler.
     // deploy satellite.
     stage.
     wait 1.
     
     // rcs to start deorbit.
-    //lock steering to retrograde.
+    lock steering to prograde.
     rcs on.
     set ship:control:fore to -1.
     wait 3.
     set ship:control:fore to 0.
     rcs off.
     wait 1.
-    //unlock steering.
+    unlock steering.
 
     deorbit().
     printm("Mission completed! Bye!").
 }
 
 on ag1 {
-    launch_me(lko_launch_altitude, 0.0).
+    set parameters to readjson(parameters, "parameters.json").
+    launch_me(parameters["orbit_altitude"], parameters["orbit_inclination"]).
+    preserve.
 }
 
-launch_me(lko_launch_altitude, 0.0).
+on ag2 {
+    edit "parameters.json".
+    preserve.
+}
+
+draw_menu().
+wait until false.
 
 // TODO:
 // found burn time.
