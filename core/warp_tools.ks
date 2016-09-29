@@ -22,7 +22,8 @@ function warp2physic {
             set warp to maxwarp.
             wait 1.
         } else {
-            wait 0.5.
+            set warp to maxwarp.
+            wait 0.1.
         }
     }
 }
@@ -53,7 +54,8 @@ function warp2rails {
             set warp to maxwarp.
             wait 1.
         } else {
-            wait 0.5.
+            set warp to maxwarp.
+            wait 0.1.
         }
     }
 

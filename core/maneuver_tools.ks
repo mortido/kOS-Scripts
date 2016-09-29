@@ -6,7 +6,7 @@ function finecircle {
 
     printm("Fine circular orbit...").
     local lock semip to abs(eta:apoapsis - eta:periapsis).
-    lock steering to heading(90, -180 * (eta:apoapsis / semip PeriOff)) + R(0,0,0).
+    lock steering to heading(90, -180 * (eta:apoapsis / semip)) + R(0,0,0).
     
     // TODO: wait for rotation.
     
@@ -82,7 +82,7 @@ function pnode {
 }
 
 global g0 is 9.82.
-function burn_duration {
+function get_burntime {
     parameter dv.
 
     local engs is list().
@@ -103,7 +103,11 @@ function burn_duration {
     local ispavg is thrustSum / denomSum.
     local ve is ispavg * g0.
     local m0 is ship:mass.
-    return (m0 * g0 / denomSum) * (1 - constant:e^(-dv/ve)).
+    //return (m0 * g0 / denomSum) * (1 - constant:e^(-dv/ve))/2.
+    return (0.5 * m0 * g0 / denomSum) * (1.5 - 0.5*constant:e^(-dv/ve) - constant:e^(-0.5 * dv/ve))+0.25.
+    //local t is (m0 * g0 / denomSum) * (1 - constant:e^(-dv/ve)).
+    //local accm is dv / t.
+    //return (dv/2)/accm.
 }
 
 function execnode {
@@ -113,20 +117,23 @@ function execnode {
     print "    Node in: " + round(nd:eta) + ", DeltaV: " + round(nd:deltav:mag).
 
     local ndv0 is nd:deltav.
-    local burn is burn_duration (ndv0:mag).
+    local burn is get_burntime (ndv0:mag).
     print "    Estimated burn duration: " + round(burn) + "s".
 
     local offset is 60.
-    warp2rails(nd:eta - burn / 2 - offset).
+    //warpto(time:seconds + nd:eta - burn / 2 - offset).
+    warpto(time:seconds + nd:eta - burn - offset).
+    wait until warp = 0 and ship:unpacked.
+    
     printm("Navigating node target.").
     rotate2(ndv0:direction, offset).
 
     // Add 1 sec as fine tune will require ~2 sec instead of 1
     printm("Waiting to burn start.").
-    wait until nd:eta <= (burn / 2 + 1).
+    //wait until nd:eta <= (burn / 2 + 0.5).
+    wait until nd:eta <= burn.
 
-    printm("Burn!").
-    set starttime to time:seconds.
+    printm("Burn - " + round(burn,2) + " s").
     local oldtime is time:seconds.
     local startvel is ship:velocity:orbit.
     local lock max_acc to ship:maxthrust / ship:mass.
@@ -139,11 +146,18 @@ function execnode {
     
     // throttle is 100% until there is less than 1 second of time left to burn
     // when there is less than 1 second - decrease the throttle linearly
-    lock throttle to min(ndv:mag/max_acc, 1).
+    lock throttle to min(max(ndv:mag/max_acc, 0.005), 1).
 
     // lets try to 'auto' correct if node direction is changed
     lock steering to lookdirup(ndv, ship:facing:topvector).
+
+    global lock ddvv to ndv:mag.
+    global aacc is max_acc.
     
+    when ddvv <= max_acc then {
+        printm("-----------FINE!").
+        global ttt is time:seconds.
+    }
     until false {
     
         // apply gravity to start velocity to exclude it from applied deltav calculation
@@ -160,7 +174,6 @@ function execnode {
             print "    Overburn.".
             lock throttle to 0.
             printm("End burn, remain dv " + round(ndv:mag,1) + "m/s, vdot: " + round(vdot(ndv0, ndv), 1)).
-            print "Real burn time - expected: " + round(time:seconds - starttime - burn, 2).
             break.
         }
     
@@ -174,6 +187,7 @@ function execnode {
 
             lock throttle to 0.
             printm("End burn, remain dv " + round(ndv:mag,1) + "m/s, vdot: " + round(vdot(ndv0, ndv), 1)).
+            print "----------TIME!!!!!!! " + (time:seconds - ttt).
             break.
         }
 

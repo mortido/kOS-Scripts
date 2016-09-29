@@ -9,13 +9,15 @@ function get_azimuth {
 function check_stage {
     parameter engs.
 
+    local all_disabled is true.
     for eng in engs {
-        if eng:flameout and eng:thrust = 0
-            {
+        if eng:flameout { //and eng:thrust = 0 {
                 return true.
-            }
+        } else if eng:ignition {
+            set all_disabled to false.
+        }
     }.
-    return false.
+    return all_disabled.
 }
 
 function get_throttle {
@@ -90,7 +92,7 @@ function launch2orbit{
             stage.
             print "Stage separeted.".
             list engines in engs.
-            wait 1.
+            wait 0.5.
         }
 
         if altitude > ramp and altitude < gt0 {
@@ -149,6 +151,7 @@ function launch2circle {
     //set orbitalt to 150000.
     
     launch2orbit(orbitalt, orbitalt, orbitincl, true).
+    local error is 1/0.
 }
 
 function deorbit {
@@ -161,7 +164,7 @@ function deorbit {
     
     // burn prograde until done
     lock throttle to 1.
-    until periapsis < 0 or ship:liquidfuel < 0 and ship:solidfuel < 0 {
+    until periapsis < 0 or ship:liquidfuel = 0 and ship:solidfuel = 0 {
         if check_stage(engs) {
             stage.
             print "Stage separeted.".
