@@ -11,6 +11,7 @@ function finecircle {
     // TODO: wait for rotation.
     
     lock max_acc to ship:maxthrust / ship:mass.
+
     // TODO: calculate dv.
     // min(dv/max_acc, 1).
     lock throttle to min(((ship:apoapsis-(ship:periapsis-accuracy))/20000),1).
