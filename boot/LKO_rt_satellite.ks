@@ -6,9 +6,10 @@ wait 1. print "." at (27, 10).
 wait 1. print "." at (28, 10).
 wait 1. print "." at (29, 10).
 
-if not RTAddon:available or RTAddon:hasconnection(ship) {
+if not addons:rt:available or addons:rt:hasconnection(ship) {
     copypath("0:/spec_char.ksm", "").
     compile "0:/core/logging.ks" to "1:/logging.ksm".
+    compile "0:/core/miscellaneous.ks" to "1:/miscellaneous.ksm".
     compile "0:/core/warp_tools.ks" to "1:/warp_tools.ksm".
     compile "0:/core/maneuver_tools.ks" to "1:/maneuver_tools.ksm".
     compile "0:/core/orbit_tools.ks" to "1:/orbit_tools.ksm".
@@ -16,17 +17,20 @@ if not RTAddon:available or RTAddon:hasconnection(ship) {
 
 run spec_char.
 run logging.
+run miscellaneous.
 run warp_tools.
 run maneuver_tools.
 run orbit_tools.
 
 global parameters is lexicon().
+global ready2launch is false.
 parameters:add("orbit_altitude", 100000).
 parameters:add("orbit_inclination", 0.0).
 writejson(parameters, "parameters.json").
 
 function draw_menu {
-    set parameters to readjson(parameters, "parameters.json").
+    set parameters to readjson("parameters.json").
+
     clearscreen.
     print "           MENU".
     print "=============================".
@@ -40,6 +44,8 @@ function draw_menu {
 
 function launch_me {
     parameter al, inc.
+
+    clearscreen.
     print "Launch RT satellite to " + al + " km with inclination " + inc + " deg.".
     print "".
     wait 3.
@@ -53,8 +59,7 @@ function launch_me {
     }
     
     launch2circle(al, inc).
-    // TODO:
-    //finecircle().
+    finecircle().
     
     // Deploy solar panels and antennas.
     panels on.
@@ -66,16 +71,16 @@ function launch_me {
     
     wait 30.
 
-    // TODO: fire decoupler.
     // deploy satellite.
-    stage.
+    core:part:getmodule("ModuleDecouple"):doevent("Decouple").
     wait 1.
     
     // rcs to start deorbit.
     lock steering to prograde.
+    wait 1.
     rcs on.
     set ship:control:fore to -1.
-    wait 3.
+    wait 5.
     set ship:control:fore to 0.
     rcs off.
     wait 1.
@@ -86,9 +91,8 @@ function launch_me {
 }
 
 on ag1 {
-    set parameters to readjson(parameters, "parameters.json").
-    launch_me(parameters["orbit_altitude"], parameters["orbit_inclination"]).
-    preserve.
+    set parameters to readjson("parameters.json").
+    set ready2launch to true.
 }
 
 on ag2 {
@@ -97,7 +101,9 @@ on ag2 {
 }
 
 draw_menu().
-wait until false.
+
+wait until ready2launch.
+launch_me(parameters["orbit_altitude"], parameters["orbit_inclination"]).
 
 // TODO:
 // found burn time.

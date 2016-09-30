@@ -6,20 +6,7 @@ function get_azimuth {
     return 90.
 }
 
-function check_stage {
-    parameter engs.
-
-    local all_disabled is true.
-    for eng in engs {
-        if eng:flameout { //and eng:thrust = 0 {
-                return true.
-        } else if eng:ignition {
-            set all_disabled to false.
-        }
-    }.
-    return all_disabled.
-}
-
+// TODO: depend on atmosphere and gravitation (+pitch).
 function get_throttle {
     parameter opt_twr.
 
@@ -39,8 +26,7 @@ function launch2orbit{
     parameter orbitalt2.
     parameter orbitincl.
     parameter displaynodes.
-    
-    
+
     // trajectory parameters
     local ramp is altitude + 25.
     local pitch1 is 0.
@@ -73,8 +59,6 @@ function launch2orbit{
     when l2o_phase = "gt2" then { printm("Navigating orbit prograde."). }
     when l2o_phase = "gt2_atm" then { printm("Leaving atmosphere. Maintaining apoapsis altitude."). }
 
-    clearscreen.
-    print "Launch2Orbit start".
     print "[T-1]:  All systems GO. Ignition!". 
     wait 1.
     start_mission().
@@ -84,16 +68,10 @@ function launch2orbit{
     local sset is up + R(0, 0, -180).
     lock throttle to tset. 
     lock steering to sset.
-    local engs is list().
-    list engines in engs.
+    update_engines().
     
     until altitude > body:atm:height and apoapsis > orbitalt1 {
-        if check_stage(engs) {
-            stage.
-            print "Stage separeted.".
-            list engines in engs.
-            wait 0.5.
-        }
+        check_stage().
 
         if altitude > ramp and altitude < gt0 {
             set l2o_phase to "liftoff".
@@ -147,11 +125,8 @@ function launch2orbit{
 function launch2circle {
     parameter orbitalt.
     parameter orbitincl.
-    
-    //set orbitalt to 150000.
-    
+
     launch2orbit(orbitalt, orbitalt, orbitincl, true).
-    local error is 1/0.
 }
 
 function deorbit {
@@ -159,18 +134,11 @@ function deorbit {
     printm("Deorbiting...").
     rotate2(retrograde).
 
-    local engs is list().
-    list engines in engs.
-    
-    // burn prograde until done
+    // burn retrograde until done
     lock throttle to 1.
     until periapsis < 0 or ship:liquidfuel = 0 and ship:solidfuel = 0 {
-        if check_stage(engs) {
-            stage.
-            print "Stage separeted.".
-            list engines in engs.
-            wait 1.
-        }
+        check_stage().
+        wait 0.1.
     }
     
     unlock throttle.
