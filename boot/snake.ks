@@ -25,6 +25,7 @@ on ag10 { set exit to true. }
 on ag1 { set start to true. preserve. }
 
 function draw_start_screen {
+    clearscreen.
     // TODO: menu.
 }
 
@@ -92,12 +93,14 @@ function draw_game {
     // print score.
     local score is 0.
     for s in snake { set score to score + 1. }
+    print "SCORE: " at (0, 0).
     
     // print snake and apple.
     
 }
 
 function draw_game_over {
+    clearscreen.
     // TODO: draw game over.
 }
 
