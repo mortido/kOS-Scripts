@@ -8,9 +8,7 @@ function finecircle {
     local lock dir to heading(90, -180 * (eta:apoapsis / semip)) .
     
     rotate2(dir).
-    
-    // TODO: wait for rotation.
-    
+
     lock throttle to min(((ship:apoapsis-ship:periapsis)/20000), 1).
     wait until ship:periapsis > ship:apoapsis - accuracy.
 
@@ -102,6 +100,7 @@ function get_burntime {
     }
     
     // https://www.reddit.com/r/Kos/comments/3ftcwk/compute_burn_time_with_calculus/
+    // https://www.reddit.com/r/Kos/comments/4568p2/executing_maneuver_nodes_figuring_out_the_rocket/
     local ispavg is thrustSum / denomSum.
     local ve is ispavg * g0.
     local m0 is ship:mass.
@@ -129,15 +128,16 @@ function execnode {
     printm("Waiting to burn start.").
     wait until nd:eta <= (burntime / 2).
 
-    local oldtime is time:seconds.
-    local startvel is ship:velocity:orbit.
-    local lock max_acc to ship:maxthrust / ship:mass.
-    local lock heregrav to body:mu/((altitude + body:radius)^2).
-    local gravdv is V(0,0,0).
-    local lock dv to ship:velocity:orbit - startvel - gravdv.
+    // TODO: inactive vessel.
+    //local oldtime is time:seconds.
+    //local startvel is ship:velocity:orbit.
+    //local lock heregrav to body:mu/((altitude + body:radius)^2).
+    //local gravdv is V(0,0,0).
+    //local lock dv to ship:velocity:orbit - startvel - gravdv.
 
     // local lock ndv to ndv0 - dv.
     local lock ndv to nd:deltav.
+    local lock max_acc to ship:maxthrust / ship:mass.
     
     function get_throttle {
         // if stage was burnt out
@@ -155,12 +155,13 @@ function execnode {
 
     until false {
     
+         // TODO: inactive vessel.
         // apply gravity to start velocity to exclude it from applied deltav calculation
-        local newtime is time:seconds.
-        local dtime is newtime - oldtime.
-        set oldtime to newtime.
-        set gravdv to gravdv + heregrav * dtime * body:position:normalized.
-        
+        //local newtime is time:seconds.
+        //local dtime is newtime - oldtime.
+        //set oldtime to newtime.
+        //set gravdv to gravdv + heregrav * dtime * body:position:normalized.
+
         check_stage().
 
         // here's the tricky part, we need to cut the throttle
