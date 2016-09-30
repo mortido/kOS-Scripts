@@ -131,7 +131,7 @@ function update_game {
 function draw_field {
 
     clearscreen.
-    print "SCORE:" at (0, 0).
+    print "SCORE: 0" at (0, 0).
     local empty_line is "".
     local xx is minx.
     until xx > maxx {
@@ -151,13 +151,6 @@ function draw_field {
     }
 }
 
-function update_score {
-    // print score.
-    local score is 0.
-    for s in snake { set score to score + 1. }
-    print "SCORE: " + score at (0, 0).
-}
-
 function draw_game_over {
     clearscreen.
     print "GAME OVER" at(round(terminal:width / 2) - 5, round(terminal:height / 2)).
@@ -171,8 +164,7 @@ until exit {
     until exit or not start {
         wait 0.2.
         update_game().
-        update_score().
     }
     draw_game_over().
-    wait 10.
+    wait 5.
 }
