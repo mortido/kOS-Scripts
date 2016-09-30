@@ -133,15 +133,17 @@ function execnode {
     wait until nd:eta <= burn.
 
     printm("Burn - " + round(burn,2) + " s").
-    local oldtime is time:seconds.
-    local startvel is ship:velocity:orbit.
-    local lock max_acc to ship:maxthrust / ship:mass.
-    local lock heregrav to body:mu/((altitude + body:radius)^2).
-    local gravdv is V(0,0,0).
-    local lock dv to ship:velocity:orbit - startvel - gravdv.
+    
+    // TODO: inactive vessel.
+    //local oldtime is time:seconds.
+    //local startvel is ship:velocity:orbit.
+    //local lock heregrav to body:mu/((altitude + body:radius)^2).
+    //local gravdv is V(0,0,0).
+    //local lock dv to ship:velocity:orbit - startvel - gravdv.
 
     // local lock ndv to ndv0 - dv.
     local lock ndv to nd:deltav.
+    local lock max_acc to ship:maxthrust / ship:mass.
     
     // throttle is 100% until there is less than 1 second of time left to burn
     // when there is less than 1 second - decrease the throttle linearly
@@ -160,10 +162,10 @@ function execnode {
     until false {
     
         // apply gravity to start velocity to exclude it from applied deltav calculation
-        local newtime is time:seconds.
-        local dtime is newtime - oldtime.
-        set oldtime to newtime.
-        set gravdv to gravdv + heregrav * dtime * body:position:normalized.
+        //local newtime is time:seconds.
+        //local dtime is newtime - oldtime.
+        //set oldtime to newtime.
+        //set gravdv to gravdv + heregrav * dtime * body:position:normalized.
 
         // here's the tricky part, we need to cut the throttle
         // as soon as our nd:deltav and initial deltav start facing opposite directions
