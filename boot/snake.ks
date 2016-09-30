@@ -10,6 +10,7 @@ global snake is list().
 global snake_head is list().
 global applex is 0.
 global appley is 0.
+global score is 0.
 
 global minx is 0.
 global miny is 1.
@@ -75,6 +76,7 @@ function renew_apple {
 
 function initialize {
     snake:clear().
+    set score to 0.
     
     // Add start position.
     local yy is round((maxy + miny) / 2).
@@ -100,6 +102,9 @@ function update_game {
     if new_snake[0] = applex and new_snake[1] = appley {
         renew_apple().
         print "A" at (applex, appley).
+        
+        set score to score + 1.
+        print score at (7, 0).
     } else {
         // remove tail.
         print "_" at (snake[0][0], snake[0][1]).
@@ -125,6 +130,8 @@ function update_game {
 
 function draw_field {
 
+    clearscreen.
+    print "SCORE:" at (0, 0).
     local empty_line is "".
     local xx is minx.
     until xx > maxx {
