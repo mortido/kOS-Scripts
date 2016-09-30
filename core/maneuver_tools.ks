@@ -100,6 +100,7 @@ function get_burntime {
     }
     
     // https://www.reddit.com/r/Kos/comments/3ftcwk/compute_burn_time_with_calculus/
+    // https://www.reddit.com/r/Kos/comments/4568p2/executing_maneuver_nodes_figuring_out_the_rocket/
     local ispavg is thrustSum / denomSum.
     local ve is ispavg * g0.
     local m0 is ship:mass.

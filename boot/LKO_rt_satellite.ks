@@ -104,5 +104,5 @@ wait until false.
 // exec without add.
 // fine circle.
 // inclanation.
-// inclanation with correct ascent node.
-
+// inclanation with specified ascent/descent node.
+// launch to orbit to position (possible with specified launch time measured by previous launch of this craft).
