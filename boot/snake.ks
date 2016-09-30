@@ -14,12 +14,36 @@ global appley is 0.
 global minx is 0.
 global miny is 1.
 global maxx is terminal:width - 1.
-global maxy is terminal:height - 1.
+global maxy is terminal:height - 2.
 
-on ag8 { set xdir to 0. set ydir tp -1. preserve. }
-on ag6 { set xdir to 1. set ydir tp 0. preserve. }
-on ag5 { set xdir to 0. set ydir tp 1. preserve. }
-on ag4 { set xdir to -1. set ydir tp 0. preserve. }
+on ag8 {
+    if ydir <> 1 {
+        set xdir to 0.
+        set ydir to -1.
+    }
+    preserve.
+}
+on ag6 {
+    if xdir <> -1 {
+        set xdir to 1.
+        set ydir to 0.
+    }
+    preserve.
+}
+on ag5 {
+    if ydir <> -1 {
+        set xdir to 0.
+        set ydir to 1.
+    }
+    preserve.
+}
+on ag4 {
+    if xdir <> 1 {
+        set xdir to -1.
+        set ydir to 0.
+    }
+    preserve.
+}
 
 on ag10 { set exit to true. }
 on ag1 { set start to true. preserve. }
@@ -54,14 +78,17 @@ function initialize {
     
     // Add start position.
     local yy is round((maxy + miny) / 2).
-    local xy is minx + 1.
+    local xx is minx + 1.
     local i is 0.
     until i = 4 {
         snake:add(list(xx, yy)).
+        set snake_head to list(xx, yy).
         set xx to xx + 1.
         set i to i + 1.
     }
-    
+    set xdir to 1.
+    set ydir to 0.
+
     // generate first apple.
     renew_apple().
 }
@@ -72,12 +99,14 @@ function update_game {
     
     if new_snake[0] = applex and new_snake[1] = appley {
         renew_apple().
+        print "A" at (applex, appley).
     } else {
         // remove tail.
+        print "_" at (snake[0][0], snake[0][1]).
         snake:remove(0).
-    }
+    } 
     
-    else if new_snake[0] < xmin or new_snake[0] > xmax or new_snake[1] < ymin or new_snake[1] > ymax {
+    if new_snake[0] < minx or new_snake[0] > maxx or new_snake[1] < miny or new_snake[1] > maxy {
         // if snake moved out of bound or into itself - game over.
         set start to false.
     }
@@ -90,23 +119,17 @@ function update_game {
     }
     
     snake:add(new_snake).
+    print "S" at (new_snake[0], new_snake[1]).
+    set snake_head to new_snake.
 }
 
-global empty_line is "".
+function draw_field {
 
-function draw_game {
-    clearscreen.
-    // print score.
-    local score is 0.
-    for s in snake { set score to score + 1. }
-    print "SCORE: " at (0, 0).
-    
-    if empty_line = "" {
-        local xx is minx.
-        until xx > maxx {
-            set empty_line to empty_line + "░".
-            set xx to xx + 1.
-        }
+    local empty_line is "".
+    local xx is minx.
+    until xx > maxx {
+        set empty_line to empty_line + "_".
+        set xx to xx + 1.
     }
 
     local yy is miny.
@@ -115,10 +138,17 @@ function draw_game {
         set yy to yy + 1.
     }
     
-    print "▚" at (applex, appley).
+    print "A" at (applex, appley).
     for s in snake {
-        print "▇" at (s[0], s[1]).
+        print "S" at (s[0], s[1]).
     }
+}
+
+function update_score {
+    // print score.
+    local score is 0.
+    for s in snake { set score to score + 1. }
+    print "SCORE: " + score at (0, 0).
 }
 
 function draw_game_over {
@@ -130,10 +160,11 @@ until exit {
     draw_start_screen().
     wait until start.
     initialize().
+    draw_field().
     until exit or not start {
-        wait 1.
+        wait 0.2.
         update_game().
-        draw_game().
+        update_score().
     }
     draw_game_over().
     wait 10.
