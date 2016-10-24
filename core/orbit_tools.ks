@@ -6,10 +6,10 @@ function get_azimuth {
     return 90.
 }
 
-// TODO: depend on atmosphere and gravitation (+pitch).
 function get_throttle {
     parameter opt_twr.
 
+    // TODO: depend on atmosphere and gravitation (+pitch).
     if maxthrust > 0 {
         local heregrav is body:mu/((altitude + body:radius)^2).
         local maxtwr is ship:maxthrust / (heregrav * ship:mass).
@@ -19,13 +19,10 @@ function get_throttle {
     }
 }
 
-global l2o_phase is "".
-
 function launch2orbit{
     parameter orbitalt1.
     parameter orbitalt2.
     parameter orbitincl.
-    parameter displaynodes.
 
     // trajectory parameters
     local ramp is altitude + 25.
@@ -51,94 +48,76 @@ function launch2orbit{
     set gt1 to gt1 + launch_altitude.
     set gt2 to gt2 + launch_altitude.
 
-    // events log
-    when l2o_phase = "liftoff" then { printm("Liftoff!"). }
-    when l2o_phase = "gt0" then { printm("Beginning gravity turn."). }
-    when l2o_phase = "gt1" then { printm("Stop pitching."). }
-    //when l2o_phase = "gt1" then { printm("Navigating surface prograde."). }
-    when l2o_phase = "gt2" then { printm("Navigating orbit prograde."). }
-    when l2o_phase = "gt2_atm" then { printm("Leaving atmosphere. Maintaining apoapsis altitude."). }
-
     print "[T-1]:  All systems GO. Ignition!". 
     wait 1.
     start_mission().
     stage.
 
-    local tset is 1.
-    local sset is up + R(0, 0, -180).
-    lock throttle to tset. 
-    lock steering to sset.
+    lock steering to up + R(0, 0, -180).
     update_engines().
-    
-    until altitude > body:atm:height and apoapsis > orbitalt1 {
-        check_stage().
 
-        if altitude > ramp and altitude < gt0 {
-            set l2o_phase to "liftoff".
-        } else if altitude > gt0 and altitude < gt1 {
-            set l2o_phase to "gt0".
-
-            local arr is (altitude - gt0) / (gt1 - gt0).
-            local pda is (cos(arr * 180) + 1) / 2.
-            local pt is pitch1 * ( 1 - pda ).
-
-            // 0 for NORTH.
-            local pitchvector is heading(get_azimuth(orbitincl), 90-pt).
-            set sset to lookdirup(pitchvector:vector, ship:facing:topvector).
-        } else if altitude > gt1 and altitude < gt2 {
-            set l2o_phase to "gt1".
-
-            // lock steering to lookdirup(srfprograde:vector, ship:facing:topvector).
-        } else if altitude > gt2 {
-            set l2o_phase to "gt2".
-
-            // we can turn orbital prograde now
-            set sset to lookdirup(prograde:vector, ship:facing:topvector).
+    local calc_t is {
+        if apoapsis >= orbitalt1 {
+            return 0.
         }
-
-        if apoapsis < orbitalt1 {
-            local ttemp is get_throttle(opt_twr).
-            if apoapsis > 0.9995 * orbitalt1 {
-                set ttemp to 0.01.
-            } else if apoapsis > 0.995 * orbitalt1 {
-                set ttemp to 0.05 * ttemp.
-            }
-            set tset to ttemp.
-        } else {
-            set l2o_phase to "gt2_atm".
-            set tset to 0.
+        if apoapsis > 0.9995 * orbitalt1 {
+                return 0.01 * get_throttle(opt_twr).
+        } else if apoapsis > 0.995 * orbitalt1 {
+                return 0.05 * get_throttle(opt_twr).
         }
-        wait 0.05.
+        return get_throttle(opt_twr).
     }.
-    set tset to 0.
+    
+    lock throttle to calc_t().
+    
+    until altitude >= ramp { check_stage(). }
+    printm("Liftoff!"). 
+    
+    until altitude >= gt0 { check_stage(). }
+    printm("Beginning gravity turn."). 
+    local lock arr to (altitude - gt0) / (gt1 - gt0).
+    local lock pda to (cos(arr * 180) + 1) / 2.
+    local lock pt to pitch1 * ( 1 - pda ).
+    local lock pitchvector to heading(get_azimuth(orbitincl), 90-pt).
+    lock steering to lookdirup(pitchvector:vector, ship:facing:topvector).
+    
+    until altitude >= gt1 { check_stage(). }
+    printm("Stop pitching."). 
+    local sset is lookdirup(pitchvector:vector, ship:facing:topvector).
+    lock steering to sset.
+    
+    until altitude >= gt2 { check_stage(). }
+    printm("Navigating orbit prograde."). 
+    lock steering to lookdirup(prograde:vector, ship:facing:topvector).
+    
+    if altitude < body:atm:height {
+        until altitude > body:atm:height { check_stage(). }
+        printm("Leaving atmosphere.").
+    }
+
+    until apoapsis > orbitalt1 { check_stage(). }
+
+    lock throttle to 0.
     wait 1.
     unlock throttle. 
     unlock steering.
     
     local nd is anode(apoapsis).
-    if displaynodes { add nd. }
-    execnode(nd).
-    if displaynodes { remove nd. }
-    printm(round(orbitalt1/1000) + "km - " + round(orbitalt2/1000) + " km orbit is reached!").
-}
-
-function launch2circle {
-    parameter orbitalt.
-    parameter orbitincl.
-
-    launch2orbit(orbitalt, orbitalt, orbitincl, true).
+    add nd.
+    execute_current_node().
+    remove nd.
+    printm(round(apoapsis/1000, 2) + "km - " + round(periapsis/1000, 2) + " km orbit is reached!").
 }
 
 function deorbit {
     
     printm("Deorbiting...").
-    rotate2(retrograde).
+    rotate2(lookdirup(retrograde:vector, ship:facing:topvector)).
 
     // burn retrograde until done
     lock throttle to 1.
     until periapsis < 0 or ship:liquidfuel = 0 and ship:solidfuel = 0 {
         check_stage().
-        wait 0.1.
     }
     
     unlock throttle.

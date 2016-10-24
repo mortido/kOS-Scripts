@@ -1,17 +1,17 @@
 @lazyglobal off.
 
 function finecircle {
-    parameter accuracy is 100.
+    parameter accuracy is 400.
 
     printm("Fine circular orbit...").
     local lock semip to abs(eta:apoapsis - eta:periapsis).
-    local lock dir to heading(90, -180 * (eta:apoapsis / semip)) .
+    local lock dir to lookdirup(heading(90, -180 * (eta:apoapsis / semip)) :vector, ship:facing:topvector) .
     
     rotate2(dir).
-
-    lock throttle to min(((ship:apoapsis-ship:periapsis)/20000), 1).
+    lock steering to dir.
+    
+    lock throttle to min(((ship:apoapsis-ship:periapsis)/50000), 0.05).
     wait until ship:periapsis > ship:apoapsis - accuracy.
-
     lock throttle to 0.
     unlock throttle.
     unlock steering.
@@ -22,23 +22,26 @@ function finecircle {
 global use_rcs4rotation is { return false. }.
 
 function rotate2 {
+    // Rotetes ship to direction. Releases lock on stearing!!! lock must be reaquired after function call.
     parameter dir.
     parameter max_time is 60.
+    parameter angle_precision is 0.15.
     
-    lock steering to lookdirup(dir:vector, ship:facing:topvector).
-    local lock dpitch to abs(dir:pitch - facing:pitch).
-    local lock dyaw to abs(dir:yaw - facing:yaw).
+    lock steering to dir.
     local starttime is time:seconds.
     if use_rcs4rotation () { rcs on. }
-    until dpitch < 0.15 and dyaw < 0.15 {
+    local lock dyaw to abs(dir:yaw - ship:facing:yaw).
+    local lock dpitch to abs(dir:pitch - ship:facing:pitch).
+    local lock droll to abs(dir:roll - ship:facing:roll).
+    until dyaw < angle_precision and dpitch < angle_precision and droll < angle_precision{
         if time:seconds - starttime > max_time {
             print beep.
             hudtext("ERROR: can't rotate rocket to target in " + max_time + "seconds", 10, 2, 30, RED, true).
             return.
         }
-        wait 0.1.
     }
     if use_rcs4rotation () { rcs off. }
+    unlock steering.
 }
 
 function nodedv {
@@ -98,89 +101,81 @@ function get_burntime {
             set denomSum to denomSum + (thrust / eng:isp).
         }
     }
-    
+    set dv to dv/2.
     // https://www.reddit.com/r/Kos/comments/3ftcwk/compute_burn_time_with_calculus/
     // https://www.reddit.com/r/Kos/comments/4568p2/executing_maneuver_nodes_figuring_out_the_rocket/
     local ispavg is thrustSum / denomSum.
     local ve is ispavg * g0.
     local m0 is ship:mass.
-    return (m0 * g0 / denomSum) * (1 - constant:e^(-dv/ve)).
+    local t is (m0 * g0 / denomSum) * (1 - constant:e^(-dv/ve)).
+    
+    local sss is nextnode:eta - t.
+    local drag is 0.
+    print "t " + t.
+    until sss > nextnode:eta {
+        local bpos is POSITIONAT(ship:body, sss) - POSITIONAT(ship, sss).
+        local vel is VELOCITYAT(ship, sss):orbit - POSITIONAT(ship, sss).
+        local altm is bpos:mag.
+        set drag to drag + (body:mu/altm^2) * cos(vang(bpos, vel))* 0.01.
+        //set drag to drag + ( body:mu/((altitude + body:radius)^2)) * 0.01.
+        set sss to sss + 0.01.
+    }
+    print "drag " + drag.
+    set dv to dv + drag.
+    
+    return 2*(m0 * g0 / denomSum) * (1 - constant:e^(-dv/ve)).
 }
 
 function execnode {
     parameter nd.
+    parameter align_time is 60.
 
     printm("Executing node.").
     print "    Node in: " + round(nd:eta) + ", DeltaV: " + round(nd:deltav:mag).
 
-    local ndv0 is nd:deltav.
-    local burntime is get_burntime (ndv0:mag).
+    local burntime is get_burntime (nd:deltav:mag).
     print "    Estimated burn duration: " + round(burntime, 2) + " s".
 
-    local offset is 60.
-    warpto(time:seconds + nd:eta - burntime / 2 - offset).
+    warpto(time:seconds + nd:eta - burntime / 2 - align_time).
     wait until warp = 0 and ship:unpacked.
     
     printm("Navigating node target.").
-    rotate2(ndv0:direction, offset).
+    rotate2(lookdirup(nd:deltav, ship:facing:topvector), align_time).
+   
+    // lets try to 'auto' correct if node direction is changed
+    lock steering to lookdirup(nd:deltav, ship:facing:topvector).
 
     // Add 1 sec as fine tune will require ~2 sec instead of 1
     printm("Waiting to burn start.").
     wait until nd:eta <= (burntime / 2).
 
-    // TODO: inactive vessel.
-    //local oldtime is time:seconds.
-    //local startvel is ship:velocity:orbit.
-    //local lock heregrav to body:mu/((altitude + body:radius)^2).
-    //local gravdv is V(0,0,0).
-    //local lock dv to ship:velocity:orbit - startvel - gravdv.
-
-    // local lock ndv to ndv0 - dv.
-    local lock ndv to nd:deltav.
-    local lock max_acc to ship:maxthrust / ship:mass.
-    
-    function get_throttle {
-        // if stage was burnt out
-        if(max_acc < 0.001){ return 0. }
-
-        return min(max(ndv:mag/max_acc, 0.005), 1).
-    }
-    
     // throttle is 100% until there is less than 1 second of time left to burn
     // when there is less than 1 second - decrease the throttle linearly
+    local lock max_acc to ship:maxthrust / ship:mass.
+    function get_throttle {
+        if(max_acc < 0.001){ return 0. } // if stage was burnt out
+        return min(max(nd:deltav:mag / max_acc, 0.005), 1).
+    }
     lock throttle to get_throttle().
 
-    // lets try to 'auto' correct if node direction is changed
-    lock steering to lookdirup(ndv, ship:facing:topvector).
-
-    until false {
-    
-         // TODO: inactive vessel.
-        // apply gravity to start velocity to exclude it from applied deltav calculation
-        //local newtime is time:seconds.
-        //local dtime is newtime - oldtime.
-        //set oldtime to newtime.
-        //set gravdv to gravdv + heregrav * dtime * body:position:normalized.
-
+    // here's the tricky part, we need to cut the throttle
+    // as soon as our nd:deltav and initial deltav start facing opposite directions (or close to it)
+    // this check is done via checking the dot product of those 2 vectors
+    local ndv0 is nd:deltav.
+    until vdot(ndv0, nd:deltav) < 0.5 {
         check_stage().
-
-        // here's the tricky part, we need to cut the throttle
-        // as soon as our nd:deltav and initial deltav start facing opposite directions (or close to it)
-        // this check is done via checking the dot product of those 2 vectors
-        if vdot(ndv0, ndv) < 0.5
-        {
-            lock throttle to 0.
-            printm("End burn, remain dv " + round(ndv:mag, 1) + "m/s, vdot: " + round(vdot(ndv0, ndv), 1)).
-            break.
-        }
-
-        wait 0.005.
     }
     
+    lock throttle to 0.
+    printm("End burn, remain dv " + round(nd:deltav:mag, 1) + "m/s, vdot: " + round(vdot(ndv0, nd:deltav), 1)).
     unlock steering.
     unlock throttle.
     wait 1.
 
     // set throttle to 0 just in case
     SET SHIP:CONTROL:PILOTMAINTHROTTLE TO 0.
+}
+
+function execute_current_node {
+    execnode(nextnode).
 }
